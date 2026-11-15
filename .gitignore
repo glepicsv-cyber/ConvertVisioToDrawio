@@ -1,0 +1,11 @@
+# Dữ liệu sinh ra khi chạy tool
+work/
+settings.json
+__pycache__/
+*.pyc
+
+# File Visio đầu vào và kết quả: chỉ giữ thư mục
+input/*
+!input/.gitkeep
+drawio_files/*
+!drawio_files/.gitkeep

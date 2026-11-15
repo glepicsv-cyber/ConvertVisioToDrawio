@@ -1,0 +1,102 @@
+# Ngưỡng và luật nhận dạng cho vsd2drawio.
+# Đơn vị khoảng cách: px (ở --scale mặc định 96 px/inch).
+# Có thể chép file này sang thư mục project và chỉ định bằng --rules <file>.
+
+# Kết luận có confidence dưới ngưỡng này sẽ được ghi vào issues.json
+confidence_threshold: 0.7
+
+geometry:
+  snap_tol: 10            # đầu connector cách biên node tối đa bao nhiêu thì bắt vào node
+  snap_ambiguity: 3       # hai node ứng viên chênh nhau ít hơn → mơ hồ
+  label_max_dist: 30      # nhãn guard cách đoạn thẳng tối đa
+  label_ambiguity: 6      # hai cạnh ứng viên chênh nhau ít hơn → mơ hồ
+  duplicate_tol: 1.0      # hai phần tử trùng hình học (LibreOffice tách fill/stroke)
+  lane_boundary_tol: 4    # node lấn sang lane khác quá ngưỡng → mơ hồ
+  bar_min_aspect: 4       # thanh fork/join: dài/rộng tối thiểu
+  bar_max_thickness: 14   # thanh fork/join: bề dày tối đa
+  dark_fill_max_luma: 90  # màu tô coi là "đặc/tối" (0-255)
+  circle_aspect_tol: 0.2  # |w/h - 1| tối đa để coi là hình tròn
+  text_in_shape_tol: 4
+
+swimlane:
+  min_lanes: 1                # số lane tối thiểu của một nhóm (1 = chấp nhận pool 1 lane)
+  min_span_ratio: 0.45        # lane phải dài ≥ tỉ lệ này so với vùng sơ đồ
+  edge_tol: 3                 # sai số khi so cạnh trên/dưới (hoặc trái/phải)
+  header_max_ratio: 0.2       # dải tiêu đề tối đa bao nhiêu phần lane
+
+verify:
+  bbox_tol: 2             # sai lệch bbox node tối đa (px) giữa model và .drawio
+  min_page_score: 0.80    # điểm giống ảnh gốc tối thiểu của một trang; thấp hơn → issue "visual"
+  region_size: 120        # cạnh ô lưới so ảnh (px theo tọa độ model)
+  worst_regions: 5        # số vùng lệch nhiều nhất liệt kê trong report
+  ink_threshold: 200      # điểm ảnh tối hơn mức này coi là "mực"
+  dilate: 5               # nới vùng mực (px ảnh) để bỏ qua lệch răng cưa/phông chữ
+
+# Phân loại theo hình học (dùng cho .vsd và cho shape .vsdx không có master quen)
+classify:
+  # Chữ nhật góc vuông có text. Theo ký hiệu UML là Object node, nhưng bộ sơ đồ của dự án
+  # vẽ bước xử lý (Action) bằng hộp Process vuông → mặc định action.
+  # Bộ file nào dùng hộp vuông cho Object node thì đặt {type: object, confidence: 0.6}.
+  rect_square_with_text: {type: action, confidence: 0.8}
+  rect_rounded_with_text: {type: action, confidence: 0.9}
+  stadium_with_text: {type: action, confidence: 0.85}
+  terminator_initial_words: [begin, start, bắt đầu, khởi đầu]
+  terminator_final_words: [end, stop, finish, kết thúc]
+
+# Ánh xạ master Visio (.vsdx) → loại AD. Tên so sánh không phân biệt hoa thường,
+# bỏ hậu tố ".số" (ví dụ "Process.47" → "process").
+vsdx:
+  master_confidence: 0.95
+  masters:
+    # UML Activity
+    initial node: initial
+    initial state: initial
+    final node: activity_final
+    activity final: activity_final
+    activity final node: activity_final
+    final state: activity_final
+    flow final: flow_final
+    flow final node: flow_final
+    action: action
+    action state: action
+    activity: action
+    call behavior action: action
+    decision: decision
+    merge: merge
+    decision node: decision
+    merge node: merge
+    fork node: fork_join
+    join node: fork_join
+    fork: fork_join
+    join: fork_join
+    synchronization bar: fork_join
+    object node: object
+    object: object
+    data: object
+    send signal: send_signal
+    send signal action: send_signal
+    accept event: receive_signal
+    accept event action: receive_signal
+    receive signal: receive_signal
+    note: note
+    comment: note
+    # Flowchart cơ bản
+    process: action
+    subprocess: action
+    predefined process: action
+    rounded rectangle: action
+    start/end: terminator        # phân biệt initial/final theo chữ (xem classify.terminator_*)
+    terminator: terminator
+    document: object
+    off-page reference: unknown
+    on-page reference: unknown
+  callout_masters: [side line callout, callout, line callout, comment callout, annotation]
+  connector_masters: [dynamic connector, connector, control flow, object flow, line, straight connector]
+  pool_masters: [cff container, pool, pool / lane, container]
+  lane_masters:
+    swimlane (vertical): vertical
+    vertical swimlane: vertical
+    swimlane: horizontal
+    functional band: horizontal
+    lane: horizontal
+  ignore_masters: [swimlane list, phase list, separator (vertical), separator (horizontal), separator, title, title block]
